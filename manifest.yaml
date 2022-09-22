@@ -51,7 +51,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: tp-kubernetes-deployment
-  minReplicas: 7
+  minReplicas: 3
   maxReplicas: 10
   targetCPUUtilizationPercentage: 25
 ---
