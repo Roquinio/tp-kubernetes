@@ -1,0 +1,96 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tp-kubernetes
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tp-kubernetes-deployment
+  namespace: tp-kubernetes
+  labels:
+    app: tp-kubernetes
+spec:
+  selector:
+    matchLabels:
+      app: tp-kubernetes
+  template:
+    metadata:
+      labels:
+        app: tp-kubernetes
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - tp-kubernetes
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: tp-kubernetes-pod
+        image: nginx
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+              cpu: "250m"
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tp-kubernetes-hpa
+  namespace: tp-kubernetes
+  labels:
+    app: tp-kubernetes
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tp-kubernetes-deployment
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 25
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tp-kubernetes-service
+  namespace: tp-kubernetes
+  labels:
+    app: tp-kubernetes
+spec:
+  selector:
+    app: tp-kubernetes
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tp-kubernetes-ingress
+  namespace: tp-kubernetes
+  labels:
+    app: tp-kubernetes
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx 
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: tp-kubernetes-service
+            port:
+              number: 80
+---
